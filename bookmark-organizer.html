@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookmark Organizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #c8f078;
+    --accent2: #78f0c8;
+    --text: #e8e8e8;
+    --muted: #666;
+    --danger: #f07878;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+
+  .header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .header .subtitle {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  /* Step UI */
+  .steps { display: flex; flex-direction: column; gap: 24px; }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    transition: border-color 0.2s;
+  }
+
+  .step.active { border-color: var(--accent); }
+  .step.done { border-color: var(--border); opacity: 0.6; }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .step.active .step-num { border-color: var(--accent); color: var(--accent); }
+  .step.done .step-num { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  .step-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 18px;
+    font-weight: 400;
+  }
+
+  .step-body { padding-left: 42px; }
+
+  label {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: var(--accent); }
+
+  .file-drop {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .file-drop:hover, .file-drop.drag-over {
+    border-color: var(--accent);
+    background: rgba(200, 240, 120, 0.03);
+  }
+
+  .file-drop input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .file-drop .icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .file-drop .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  .file-name {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 4px;
+    color: var(--accent2);
+    font-size: 12px;
+    display: none;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+  .btn-primary:hover { background: #d4f58a; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--text); }
+
+  /* Progress */
+  .progress-wrap {
+    margin-top: 20px;
+  }
+
+  .progress-bar-bg {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .progress-label {
+    color: var(--muted);
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Folder categories config */
+  .categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .cat-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .cat-tag .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Results */
+  .results-section { display: none; }
+
+  .folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .folder-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .folder-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+
+  .folder-header:hover { background: var(--surface2); }
+
+  .folder-icon { font-size: 16px; }
+
+  .folder-name {
+    font-family: 'Instrument Serif', serif;
+    font-size: 16px;
+    flex: 1;
+  }
+
+  .folder-count {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .folder-chevron {
+    color: var(--muted);
+    font-size: 11px;
+    transition: transform 0.2s;
+  }
+
+  .folder-chevron.open { transform: rotate(180deg); }
+
+  .folder-links {
+    display: none;
+    padding: 0 16px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .folder-links.open { display: block; }
+
+  .link-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  .link-item:last-child { border-bottom: none; }
+
+  .link-title {
+    flex: 1;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .link-domain {
+    color: var(--muted);
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .log-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 16px;
+    height: 130px;
+    overflow-y: auto;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+
+  .log-box .log-entry { margin-bottom: 4px; }
+  .log-box .log-ok { color: var(--accent2); }
+  .log-box .log-warn { color: #f0c878; }
+  .log-box .log-err { color: var(--danger); }
+
+  .stat-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 20px;
+    min-width: 130px;
+  }
+
+  .stat-val {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 2px; }
+
+  .download-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .note {
+    background: rgba(200, 240, 120, 0.06);
+    border: 1px solid rgba(200, 240, 120, 0.2);
+    border-radius: 5px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    margin-top: 12px;
+  }
+
+  .dot-colors { --c1: #c8f078; --c2: #78f0c8; --c3: #f078c8; --c4: #f0c878; --c5: #78c8f0; --c6: #c878f0; --c7: #f09078; --c8: #90f078; --c9: #7890f0; --c10: #f07890; --c11: #90c8f0; --c12: #f0d878; --c13: #a0f0d8; --c14: #f0a878; --c15: #b0b0b0; --c16: #d878f0; }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Bookmark Organiser</h1>
+  <span class="subtitle">AI-powered · Firefox compatible</span>
+</div>
+
+<div class="main">
+  <div class="steps">
+
+    <!-- Step 1: API Key -->
+    <div class="step active" id="step1">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-title">Enter your Claude API key</div>
+      </div>
+      <div class="step-body">
+        <label>Anthropic API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off" />
+        <div class="note" style="margin-top:12px">
+          🔒 Your key stays in your browser — it's never sent anywhere except directly to Anthropic's API.
+          Get one at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent2)">console.anthropic.com</a>
+        </div>
+        <div style="margin-top:16px">
+          <button class="btn btn-primary" onclick="confirmKey()">Continue →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Upload -->
+    <div class="step" id="step2">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-title">Upload your bookmarks file</div>
+      </div>
+      <div class="step-body">
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px">
+          In Firefox: Bookmarks menu → Manage Bookmarks → Import &amp; Backup → Export Bookmarks to HTML
+        </p>
+        <div class="file-drop" id="fileDrop">
+          <input type="file" id="fileInput" accept=".html,.htm" onchange="handleFile(this)">
+          <span class="icon">📂</span>
+          <div>Drop your <strong>bookmarks.html</strong> here</div>
+          <div class="hint">or click to browse</div>
+        </div>
+        <div class="file-name" id="fileName"></div>
+        <div style="margin-top:18px">
+          <button class="btn btn-primary" id="nextToCategories" onclick="goToStep3()" disabled>Continue →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Configure categories -->
+    <div class="step" id="step3">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-title">Choose folder categories</div>
+      </div>
+      <div class="step-body">
+        <p style="color:var(--muted); font-size:12px; margin-bottom:14px">These are the folders your bookmarks will be sorted into. Edit as needed.</p>
+        <div id="categoriesArea"></div>
+        <div style="margin-top:18px">
+          <button class="btn btn-primary" onclick="startOrganising()">🪄 Organise my bookmarks</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Processing -->
+    <div class="step" id="step4">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div class="step-title">AI is organising...</div>
+      </div>
+      <div class="step-body">
+        <div class="progress-wrap">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBar"></div>
+          </div>
+          <div class="progress-label">
+            <span id="progressText">Starting...</span>
+            <span id="progressPct">0%</span>
+          </div>
+        </div>
+        <div class="log-box" id="logBox"></div>
+      </div>
+    </div>
+
+    <!-- Step 5: Results & Download -->
+    <div class="step results-section" id="step5">
+      <div class="step-header">
+        <div class="step-num">✓</div>
+        <div class="step-title">Done! Your organised bookmarks</div>
+      </div>
+      <div class="step-body">
+        <div class="stat-row" id="statRow"></div>
+        <div class="folder-list" id="folderList"></div>
+        <div class="download-row">
+          <button class="btn btn-primary" onclick="downloadBookmarks()">⬇ Download organised bookmarks.html</button>
+          <button class="btn btn-secondary" onclick="location.reload()">Start over</button>
+        </div>
+        <div class="note">
+          To import: Firefox → Bookmarks menu → Manage Bookmarks → Import &amp; Backup → Import Bookmarks from HTML
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let apiKey = '';
+let rawBookmarks = []; // [{title, url, addDate, icon}]
+let categorized = {}; // {folder: [{title,url,addDate,icon}]}
+let fileContent = '';
+
+// ── Default categories ────────────────────────────────────────────────────────
+const DEFAULT_CATS = [
+  { name: 'Design', emoji: '🎨' },
+  { name: 'Product Management', emoji: '📋' },
+  { name: 'Development', emoji: '💻' },
+  { name: 'Work & Career', emoji: '💼' },
+  { name: 'Learning & Courses', emoji: '📚' },
+  { name: 'Articles & Reading', emoji: '📰' },
+  { name: 'Shopping', emoji: '🛍️' },
+  { name: 'Health & Fitness', emoji: '🏋️' },
+  { name: 'Finance', emoji: '💰' },
+  { name: 'Entertainment', emoji: '🎬' },
+  { name: 'Tools & Productivity', emoji: '🔧' },
+  { name: 'Personal & Hobbies', emoji: '🌿' },
+  { name: 'Travel', emoji: '✈️' },
+  { name: 'Social & Community', emoji: '👥' },
+  { name: 'Other', emoji: '📌' },
+];
+
+let categories = [...DEFAULT_CATS];
+
+// ── Step 1: API Key ──────────────────────────────────────────────────────────
+function confirmKey() {
+  const val = document.getElementById('apiKey').value.trim();
+  if (!val.startsWith('sk-ant-')) {
+    alert('Please enter a valid Anthropic API key starting with sk-ant-');
+    return;
+  }
+  apiKey = val;
+  setStepDone(1);
+  setStepActive(2);
+}
+
+// ── Step 2: File Upload ──────────────────────────────────────────────────────
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fileContent = e.target.result;
+    rawBookmarks = parseBookmarks(fileContent);
+    document.getElementById('fileName').textContent = `✓ ${file.name} — ${rawBookmarks.length} bookmarks found`;
+    document.getElementById('fileName').style.display = 'block';
+    document.getElementById('nextToCategories').disabled = false;
+  };
+  reader.readAsText(file);
+}
+
+// Drag-drop
+const dropZone = document.getElementById('fileDrop');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('fileInput').files = dt.files;
+    handleFile(document.getElementById('fileInput'));
+  }
+});
+
+function parseBookmarks(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const anchors = doc.querySelectorAll('a[href]');
+  const results = [];
+  anchors.forEach(a => {
+    const url = a.getAttribute('href') || '';
+    if (!url || url.startsWith('place:') || url.startsWith('javascript:')) return;
+    results.push({
+      title: a.textContent.trim() || url,
+      url,
+      addDate: a.getAttribute('add_date') || '',
+      icon: a.getAttribute('icon') || '',
+    });
+  });
+  return results;
+}
+
+// ── Step 3: Categories ───────────────────────────────────────────────────────
+function goToStep3() {
+  setStepDone(2);
+  setStepActive(3);
+  renderCategories();
+}
+
+const COLORS = ['#c8f078','#78f0c8','#f078c8','#f0c878','#78c8f0','#c878f0','#f09078','#90f078','#7890f0','#f07890','#90c8f0','#f0d878','#a0f0d8','#f0a878','#b0b0b0','#d878f0'];
+
+function renderCategories() {
+  const area = document.getElementById('categoriesArea');
+  area.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'categories-grid';
+  categories.forEach((cat, i) => {
+    const tag = document.createElement('div');
+    tag.className = 'cat-tag';
+    tag.innerHTML = `<span class="dot" style="background:${COLORS[i % COLORS.length]}"></span><span>${cat.emoji} ${cat.name}</span>`;
+    grid.appendChild(tag);
+  });
+  area.appendChild(grid);
+}
+
+// ── Step 4: AI Processing ────────────────────────────────────────────────────
+async function startOrganising() {
+  setStepDone(3);
+  setStepActive(4);
+
+  const catNames = categories.map(c => c.name);
+  const BATCH = 150;
+  const total = rawBookmarks.length;
+  let done = 0;
+
+  // Init result buckets
+  categorized = {};
+  categories.forEach(c => { categorized[c.name] = []; });
+  categorized['Other'] = categorized['Other'] || [];
+
+  log(`Processing ${total} bookmarks in batches of ${BATCH}...`, 'ok');
+
+  for (let i = 0; i < total; i += BATCH) {
+    const batch = rawBookmarks.slice(i, i + BATCH);
+    log(`Batch ${Math.floor(i/BATCH)+1}/${Math.ceil(total/BATCH)} — sending ${batch.length} items...`);
+
+    try {
+      const assignments = await categorizeBatch(batch, catNames);
+      batch.forEach((bm, j) => {
+        const folder = assignments[j] || 'Other';
+        const key = catNames.includes(folder) ? folder : 'Other';
+        categorized[key].push(bm);
+      });
+      done += batch.length;
+      updateProgress(done, total, `Categorised ${done} / ${total}`);
+      log(`  ✓ Batch done`, 'ok');
+    } catch (err) {
+      log(`  ✗ Batch failed: ${err.message} — falling back to Other`, 'err');
+      batch.forEach(bm => categorized['Other'].push(bm));
+      done += batch.length;
+      updateProgress(done, total);
+    }
+  }
+
+  log(`All done! Building result...`, 'ok');
+  showResults();
+}
+
+async function categorizeBatch(batch, catNames) {
+  const lines = batch.map((bm, i) => {
+    let domain = '';
+    try { domain = new URL(bm.url).hostname.replace('www.',''); } catch(e) {}
+    return `${i}: ${bm.title} (${domain})`;
+  }).join('\n');
+
+  const catList = catNames.join(', ');
+
+  const prompt = `Categorize each bookmark into exactly ONE of these folders: ${catList}
+
+Bookmarks (index: title (domain)):
+${lines}
+
+Rules:
+- Use the most specific matching folder
+- Default to "Other" only if nothing fits
+- Respond ONLY with valid JSON: {"results": {"0": "FolderName", "1": "FolderName", ...}}
+- Include every index, no missing ones`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API ${res.status}: ${err.slice(0,200)}`);
+  }
+
+  const data = await res.json();
+  let text = data.content[0].text.trim();
+  text = text.replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(text);
+  return parsed.results;
+}
+
+// ── Step 5: Results ──────────────────────────────────────────────────────────
+function showResults() {
+  document.getElementById('step4').classList.remove('active');
+  document.getElementById('step4').classList.add('done');
+
+  const step5 = document.getElementById('step5');
+  step5.classList.add('active');
+  step5.classList.remove('results-section');
+
+  // Stats
+  const total = rawBookmarks.length;
+  const folderCount = Object.values(categorized).filter(v => v.length > 0).length;
+  const statRow = document.getElementById('statRow');
+  statRow.innerHTML = `
+    <div class="stat"><div class="stat-val">${total}</div><div class="stat-lbl">Bookmarks sorted</div></div>
+    <div class="stat"><div class="stat-val">${folderCount}</div><div class="stat-lbl">Folders created</div></div>
+    <div class="stat"><div class="stat-val">${Math.round(total/folderCount)}</div><div class="stat-lbl">Avg per folder</div></div>
+  `;
+
+  // Folder list
+  const folderList = document.getElementById('folderList');
+  folderList.innerHTML = '';
+
+  const sorted = Object.entries(categorized)
+    .filter(([,v]) => v.length > 0)
+    .sort((a,b) => b[1].length - a[1].length);
+
+  sorted.forEach(([name, links], fi) => {
+    const cat = categories.find(c => c.name === name);
+    const emoji = cat ? cat.emoji : '📌';
+    const color = COLORS[fi % COLORS.length];
+
+    const item = document.createElement('div');
+    item.className = 'folder-item';
+
+    const header = document.createElement('div');
+    header.className = 'folder-header';
+    header.innerHTML = `
+      <span class="folder-icon" style="width:22px;height:22px;background:${color}22;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px">${emoji}</span>
+      <span class="folder-name">${name}</span>
+      <span class="folder-count">${links.length}</span>
+      <span class="folder-chevron" id="chev-${fi}">▼</span>
+    `;
+
+    const linksDiv = document.createElement('div');
+    linksDiv.className = 'folder-links';
+    linksDiv.id = `links-${fi}`;
+
+    links.slice(0, 50).forEach(bm => {
+      let domain = '';
+      try { domain = new URL(bm.url).hostname.replace('www.',''); } catch(e) {}
+      const row = document.createElement('div');
+      row.className = 'link-item';
+      row.innerHTML = `<span class="link-title" title="${bm.title}">${bm.title}</span><span class="link-domain">${domain}</span>`;
+      linksDiv.appendChild(row);
+    });
+
+    if (links.length > 50) {
+      const more = document.createElement('div');
+      more.style.cssText = 'color:var(--muted);font-size:11px;padding:8px 0';
+      more.textContent = `+ ${links.length - 50} more`;
+      linksDiv.appendChild(more);
+    }
+
+    header.onclick = () => {
+      const isOpen = linksDiv.classList.toggle('open');
+      document.getElementById(`chev-${fi}`).classList.toggle('open', isOpen);
+    };
+
+    item.appendChild(header);
+    item.appendChild(linksDiv);
+    folderList.appendChild(item);
+  });
+}
+
+// ── Download ─────────────────────────────────────────────────────────────────
+function downloadBookmarks() {
+  const now = Math.floor(Date.now() / 1000);
+  let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file. It will be read and overwritten. DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks Menu</H1>
+<DL><p>\n`;
+
+  const sorted = Object.entries(categorized)
+    .filter(([,v]) => v.length > 0)
+    .sort((a,b) => b[1].length - a[1].length);
+
+  sorted.forEach(([folder, links]) => {
+    html += `    <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">${escHtml(folder)}</H3>\n    <DL><p>\n`;
+    links.forEach(bm => {
+      const iconAttr = bm.icon ? ` ICON="${bm.icon}"` : '';
+      html += `        <DT><A HREF="${escHtml(bm.url)}" ADD_DATE="${bm.addDate}"${iconAttr}>${escHtml(bm.title)}</A>\n`;
+    });
+    html += `    </DL><p>\n`;
+  });
+
+  html += `</DL>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bookmarks-organised.html';
+  a.click();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function setStepActive(n) {
+  const el = document.getElementById(`step${n}`);
+  el.classList.add('active');
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function setStepDone(n) {
+  const el = document.getElementById(`step${n}`);
+  el.classList.remove('active');
+  el.classList.add('done');
+  const num = el.querySelector('.step-num');
+  if (num) num.textContent = '✓';
+}
+
+function updateProgress(done, total, label) {
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  if (label) document.getElementById('progressText').textContent = label;
+}
+
+function log(msg, type) {
+  const box = document.getElementById('logBox');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry' + (type ? ` log-${type}` : '');
+  entry.textContent = `> ${msg}`;
+  box.appendChild(entry);
+  box.scrollTop = box.scrollHeight;
+}
+</script>
+</body>
+</html>
